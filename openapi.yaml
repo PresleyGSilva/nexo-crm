@@ -1,11 +1,500 @@
 openapi: 3.0.3
 info:
   title: Nexo CRM API
+  description: Multi-tenant CRM SaaS MVP (Go + Postgres). Tenant via X-Org-ID header + membership check.
   version: 0.1.0
 servers:
   - url: http://localhost:8080/api/v1
 security:
   - bearerAuth: []
+tags:
+  - name: auth
+  - name: contacts
+  - name: deals
+  - name: tasks
+  - name: interactions
+  - name: dashboard
+  - name: audit
+  - name: settings
+paths:
+  /auth/register:
+    post:
+      tags: [auth]
+      security: []
+      summary: Register user + personal org
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                org_name: { type: string }
+      responses:
+        '201':
+          description: Created session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '409': { $ref: '#/components/responses/Conflict' }
+  /auth/login:
+    post:
+      tags: [auth]
+      security: []
+      summary: Login with email + password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: Session with org list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Rotate refresh cookie into a new access token
+      responses:
+        '200':
+          description: New access token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/forgot:
+    post:
+      tags: [auth]
+      security: []
+      summary: Request password reset (token goes to server log in MVP)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Always ok (anti-enumeration)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+  /auth/reset:
+    post:
+      tags: [auth]
+      security: []
+      summary: Reset password with token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, minLength: 8 }
+      responses:
+        '200':
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Caller identity + memberships
+      responses:
+        '200':
+          description: Me
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+                  orgs:
+                    type: array
+                    items: { $ref: '#/components/schemas/Org' }
+  /contacts:
+    get:
+      tags: [contacts]
+      summary: List contacts (search + pagination)
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Contact page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactPage'
+    post:
+      tags: [contacts]
+      summary: Create contact (member+)
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Contact' }
+  /contacts/{id}:
+    get:
+      tags: [contacts]
+      summary: Get contact
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Contact
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Contact' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [contacts]
+      summary: Update contact (member+)
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContactInput' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Contact' }
+    delete:
+      tags: [contacts]
+      summary: Delete contact (admin+)
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '204': { description: Deleted }
+  /deals:
+    get:
+      tags: [deals]
+      summary: List deals
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: stage
+          in: query
+          schema: { type: string, enum: [prospecting, qualified, proposal, negotiation, won, lost] }
+      responses:
+        '200':
+          description: Deal page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealPage' }
+    post:
+      tags: [deals]
+      summary: Create deal (member+)
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+  /deals/{id}:
+    get:
+      tags: [deals]
+      summary: Get deal
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Deal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [deals]
+      summary: Update deal (member+)
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DealInput' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+    delete:
+      tags: [deals]
+      summary: Delete deal (admin+)
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '204': { description: Deleted }
+  /deals/{id}/stage:
+    patch:
+      tags: [deals]
+      summary: Move deal stage (member+, audited)
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stage]
+              properties:
+                stage: { type: string, enum: [prospecting, qualified, proposal, negotiation, won, lost] }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Deal' }
+  /tasks:
+    get:
+      tags: [tasks]
+      summary: List tasks
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, in_progress, done, cancelled] }
+      responses:
+        '200':
+          description: Task page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskPage' }
+    post:
+      tags: [tasks]
+      summary: Create task (member+)
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Task' }
+  /tasks/{id}:
+    get:
+      tags: [tasks]
+      summary: Get task
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Task
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Task' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [tasks]
+      summary: Update task (member+)
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskInput' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Task' }
+    delete:
+      tags: [tasks]
+      summary: Delete task (admin+)
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '204': { description: Deleted }
+  /interactions:
+    get:
+      tags: [interactions]
+      summary: List interactions
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: contact_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: deal_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Interaction page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InteractionPage' }
+    post:
+      tags: [interactions]
+      summary: Create interaction (member+)
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InteractionInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Interaction' }
+  /interactions/{id}:
+    get:
+      tags: [interactions]
+      summary: Get interaction
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Interaction
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Interaction' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /dashboard/summary:
+    get:
+      tags: [dashboard]
+      summary: Counts, pipeline totals, win rate
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+      responses:
+        '200':
+          description: Summary
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DashboardSummary' }
+  /audit-logs:
+    get:
+      tags: [audit]
+      summary: Paginated audit logs
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: entity
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Audit page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditPage' }
+  /settings:
+    get:
+      tags: [settings]
+      summary: Get org settings
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+      responses:
+        '200':
+          description: Settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Settings' }
+    patch:
+      tags: [settings]
+      summary: Merge org settings (admin+)
+      parameters:
+        - $ref: '#/components/parameters/OrgID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [settings]
+              properties:
+                settings: { type: object }
+      responses:
+        '200':
+          description: Updated settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Settings' }
 components:
   securitySchemes:
     bearerAuth:
@@ -13,114 +502,226 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
-    OrgId:
-      in: header
+    OrgID:
       name: X-Org-ID
+      in: header
       required: true
-      schema:
-        type: string
-        format: uuid
-paths:
-  /auth/register:
-    post:
-      summary: Register
-      security: []
-      responses: { "201": { description: Created } }
-  /auth/login:
-    post:
-      summary: Login
-      security: []
-      responses: { "200": { description: OK } }
-  /auth/refresh:
-    post:
-      summary: Refresh
-      responses: { "200": { description: OK } }
-  /auth/forgot:
-    post:
-      summary: Forgot password
-      security: []
-      responses: { "202": { description: Accepted } }
-  /auth/reset:
-    post:
-      summary: Reset password
-      security: []
-      responses: { "200": { description: OK } }
-  /contacts:
-    get:
-      summary: List contacts
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-        - { in: query, name: q, schema: { type: string } }
-        - { in: query, name: page, schema: { type: integer, default: 1 } }
-        - { in: query, name: per_page, schema: { type: integer, default: 20 } }
-      responses: { "200": { description: OK } }
-    post:
-      summary: Create contact
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-      responses: { "201": { description: Created } }
-  /deals:
-    get:
-      summary: List deals
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-      responses: { "200": { description: OK } }
-    post:
-      summary: Create deal
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-      responses: { "201": { description: Created } }
-  /deals/{id}:
-    patch:
-      summary: Update deal
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-        - { in: path, name: id, required: true, schema: { type: string } }
-      responses: { "200": { description: OK } }
-  /deals/{id}/stage:
-    patch:
-      summary: Move deal stage
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-        - { in: path, name: id, required: true, schema: { type: string } }
-      responses: { "200": { description: OK } }
-  /tasks:
-    get:
-      summary: List tasks
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-      responses: { "200": { description: OK } }
-    post:
-      summary: Create task
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-      responses: { "201": { description: Created } }
-  /interactions:
-    get:
-      summary: List interactions
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-      responses: { "200": { description: OK } }
-  /dashboard/summary:
-    get:
-      summary: Dashboard summary
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-      responses: { "200": { description: OK } }
-  /audit-logs:
-    get:
-      summary: List audit logs
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-      responses: { "200": { description: OK } }
-  /settings:
-    get:
-      summary: Get settings
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-      responses: { "200": { description: OK } }
-    patch:
-      summary: Update settings
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-      responses: { "200": { description: OK } }
+      schema: { type: string, format: uuid }
+    ID:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Q:
+      name: q
+      in: query
+      schema: { type: string }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, default: 1 }
+    PerPage:
+      name: per_page
+      in: query
+      schema: { type: integer, default: 20 }
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string }
+    Org:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        role: { type: string }
+    Session:
+      type: object
+      properties:
+        access_token: { type: string }
+        user: { $ref: '#/components/schemas/User' }
+        org: { $ref: '#/components/schemas/Org' }
+        orgs:
+          type: array
+          items: { $ref: '#/components/schemas/Org' }
+    Contact:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        company: { type: string, nullable: true }
+        position: { type: string, nullable: true }
+        status: { type: string }
+        notes: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ContactInput:
+      type: object
+      properties:
+        name: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        company: { type: string }
+        position: { type: string }
+        status: { type: string }
+        notes: { type: string }
+    ContactPage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Contact' } }
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+    Deal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        contact_id: { type: string, format: uuid, nullable: true }
+        value_cents: { type: integer }
+        stage: { type: string }
+        expected_close: { type: string, format: date }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    DealInput:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+        contact_id: { type: string, format: uuid }
+        value_cents: { type: integer }
+        stage: { type: string }
+        expected_close: { type: string, format: date }
+    DealPage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Deal' } }
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+    Task:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: string }
+        due_date: { type: string, format: date }
+        assigned_to: { type: string, format: uuid, nullable: true }
+        contact_id: { type: string, format: uuid, nullable: true }
+        deal_id: { type: string, format: uuid, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    TaskInput:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+        status: { type: string }
+        due_date: { type: string, format: date }
+        assigned_to: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        deal_id: { type: string, format: uuid }
+    TaskPage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Task' } }
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+    Interaction:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid, nullable: true }
+        deal_id: { type: string, format: uuid, nullable: true }
+        type: { type: string }
+        content: { type: string }
+        created_at: { type: string, format: date-time }
+    InteractionInput:
+      type: object
+      required: [type, content]
+      properties:
+        contact_id: { type: string, format: uuid }
+        deal_id: { type: string, format: uuid }
+        type: { type: string, enum: [call, email, meeting, note, whatsapp] }
+        content: { type: string }
+    InteractionPage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/Interaction' } }
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+    DashboardSummary:
+      type: object
+      properties:
+        contacts_count: { type: integer }
+        deals_open_count: { type: integer }
+        deals_won_count: { type: integer }
+        deals_lost_count: { type: integer }
+        tasks_pending_count: { type: integer }
+        interactions_count: { type: integer }
+        pipeline_by_stage:
+          type: array
+          items:
+            type: object
+            properties:
+              stage: { type: string }
+              count: { type: integer }
+              total_cents: { type: integer }
+        total_pipeline_cents: { type: integer }
+        won_rate: { type: number }
+    AuditPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              user_id: { type: string, format: uuid, nullable: true }
+              action: { type: string }
+              entity: { type: string }
+              entity_id: { type: string, nullable: true }
+              metadata: { type: object }
+              created_at: { type: string, format: date-time }
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+    Settings:
+      type: object
+      properties:
+        org_id: { type: string, format: uuid }
+        settings: { type: object }
+        updated_at: { type: string, format: date-time }

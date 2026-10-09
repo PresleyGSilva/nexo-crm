@@ -1,8 +1,6 @@
 .env
-backend/api
-node_modules/
-frontend/.next/
-frontend/out/
-.next/
-dist/
-pgdata/
+backend/crm-api
+*.exe
+bin/
+.idea/
+.vscode/

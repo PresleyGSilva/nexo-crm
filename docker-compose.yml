@@ -18,8 +18,8 @@ services:
 
   api:
     build:
-      context: ./backend
-    restart: unless-stopped
+      context: .
+      dockerfile: backend/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy

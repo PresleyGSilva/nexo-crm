@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-slate-100 text-slate-900 antialiased;
+}
+.dark body {
+  @apply bg-slate-950 text-slate-100;
+}
+
+.card {
+  @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm;
+}
+.dark .card {
+  @apply border-slate-800 bg-slate-900;
+}
+.input {
+  @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100;
+}
+.dark .input {
+  @apply border-slate-700 bg-slate-800 focus:ring-brand-700;
+}
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50;
+}
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium transition hover:bg-slate-100;
+}
+.dark .btn-secondary {
+  @apply border-slate-700 hover:bg-slate-800;
+}
+.table th {
+  @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
+}
+.table td {
+  @apply border-t border-slate-100 px-3 py-2 text-sm;
+}
+.dark .table td {
+  @apply border-slate-800;
+}
+.skeleton {
+  @apply animate-pulse rounded bg-slate-200;
+}
+.dark .skeleton {
+  @apply bg-slate-800;
+}
