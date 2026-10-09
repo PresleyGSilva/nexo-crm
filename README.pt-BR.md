@@ -52,6 +52,20 @@ próprio banco de dados — e não por lembrar de escrever
   auditoria, settings, com fallback de dados mock para trabalhar na UI
   sem a API.
 
+## Screenshots (app real, execução local com dados seed)
+
+| Login | Dashboard |
+|---|---|
+| ![Login](docs/screenshots/01-login.png) | ![Dashboard](docs/screenshots/02-dashboard.png) |
+
+| Contatos | Funil Kanban |
+|---|---|
+| ![Contatos](docs/screenshots/03-contacts.png) | ![Deals](docs/screenshots/04-deals.png) |
+
+| Tarefas | Auditoria |
+|---|---|
+| ![Tarefas](docs/screenshots/05-tasks.png) | ![Auditoria](docs/screenshots/06-audit.png) |
+
 ## Stack
 
 | Camada   | Escolha | Por quê |

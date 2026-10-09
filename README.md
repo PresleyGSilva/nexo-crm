@@ -48,6 +48,20 @@ remembering `WHERE org_id = …` in every handler?**
 - **Frontend** — login/register, dashboard, contacts, deals, tasks, audit,
   settings, with a mock-data fallback for UI work without the API.
 
+## Screenshots (real app, local run with seed data)
+
+| Login | Dashboard |
+|---|---|
+| ![Login](docs/screenshots/01-login.png) | ![Dashboard](docs/screenshots/02-dashboard.png) |
+
+| Contacts | Deals Kanban |
+|---|---|
+| ![Contacts](docs/screenshots/03-contacts.png) | ![Deals](docs/screenshots/04-deals.png) |
+
+| Tasks | Audit log |
+|---|---|
+| ![Tasks](docs/screenshots/05-tasks.png) | ![Audit](docs/screenshots/06-audit.png) |
+
 ## Stack
 
 | Layer    | Choice | Why |

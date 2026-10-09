@@ -28,7 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!res.ok) throw new Error("Credenciais inválidas");
     const body = await res.json();
     const access = body.access_token || body.token || body.data?.access_token || "";
-    const org = body.org_id || body.orgId || body.data?.org_id || "demo";
+    const orgs = body.orgs || body.data?.orgs || [];
+    const org = orgs[0]?.id || body.org_id || body.orgId || body.data?.org_id || "demo";
     if (access) localStorage.setItem("nexo_access_token", access);
     localStorage.setItem("nexo_org_id", org);
     setToken(access || "demo");
