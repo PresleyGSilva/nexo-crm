@@ -1,0 +1,126 @@
+openapi: 3.0.3
+info:
+  title: Nexo CRM API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080/api/v1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    OrgId:
+      in: header
+      name: X-Org-ID
+      required: true
+      schema:
+        type: string
+        format: uuid
+paths:
+  /auth/register:
+    post:
+      summary: Register
+      security: []
+      responses: { "201": { description: Created } }
+  /auth/login:
+    post:
+      summary: Login
+      security: []
+      responses: { "200": { description: OK } }
+  /auth/refresh:
+    post:
+      summary: Refresh
+      responses: { "200": { description: OK } }
+  /auth/forgot:
+    post:
+      summary: Forgot password
+      security: []
+      responses: { "202": { description: Accepted } }
+  /auth/reset:
+    post:
+      summary: Reset password
+      security: []
+      responses: { "200": { description: OK } }
+  /contacts:
+    get:
+      summary: List contacts
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: page, schema: { type: integer, default: 1 } }
+        - { in: query, name: per_page, schema: { type: integer, default: 20 } }
+      responses: { "200": { description: OK } }
+    post:
+      summary: Create contact
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses: { "201": { description: Created } }
+  /deals:
+    get:
+      summary: List deals
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses: { "200": { description: OK } }
+    post:
+      summary: Create deal
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses: { "201": { description: Created } }
+  /deals/{id}:
+    patch:
+      summary: Update deal
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses: { "200": { description: OK } }
+  /deals/{id}/stage:
+    patch:
+      summary: Move deal stage
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses: { "200": { description: OK } }
+  /tasks:
+    get:
+      summary: List tasks
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses: { "200": { description: OK } }
+    post:
+      summary: Create task
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses: { "201": { description: Created } }
+  /interactions:
+    get:
+      summary: List interactions
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses: { "200": { description: OK } }
+  /dashboard/summary:
+    get:
+      summary: Dashboard summary
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses: { "200": { description: OK } }
+  /audit-logs:
+    get:
+      summary: List audit logs
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses: { "200": { description: OK } }
+  /settings:
+    get:
+      summary: Get settings
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses: { "200": { description: OK } }
+    patch:
+      summary: Update settings
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses: { "200": { description: OK } }

@@ -1,0 +1,8 @@
+.env
+backend/api
+node_modules/
+frontend/.next/
+frontend/out/
+.next/
+dist/
+pgdata/
